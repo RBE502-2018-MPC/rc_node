@@ -194,7 +194,12 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
+# Stuff for RawHID
+#set(CMAKE_C_FLAGS "-Wall -O2 -DOS_LINUX")
+set(CMAKE_C_FLAGS "-Wall -g -DOS_LINUX")
+add_library(rawhid src/hid_LINUX.c)
+
 # Executables for the rc_node
 add_executable(rc_node src/rc_node_main.cpp)
-target_link_libraries(rc_node ${catkin_LIBRARIES})
+target_link_libraries(rc_node rawhid usb ${catkin_LIBRARIES})
 add_dependencies(rc_node rc_node_generate_messages_cpp)
