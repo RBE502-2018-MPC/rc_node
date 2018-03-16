@@ -12,7 +12,7 @@
 #endif
 
 // Includes for HID protocol
-#include "hid.h"
+#include "hid.hpp"
 #include "stdint.h"
 
 // HID buffers
