@@ -39,6 +39,7 @@ void inputCallback(const rc_node::car_input::ConstPtr& msg) {
   buf_out[0] = (uint8_t) (steer*KSTEERING + KBITVAL_MAX_ABS);
   buf_out[1] = (uint8_t) (power*KPOWER + KBITVAL_MAX_ABS);
   rawhid_send(0, buf_out, 64, 100);  //Ignore errors for now... #TODO
+  ROS_INFO("Sending out: [%d %d]", buf_out[0], buf_out[1]);
 }
 
 int main(int argc, char **argv) {
@@ -52,7 +53,7 @@ int main(int argc, char **argv) {
       return -1;
     }
   }
-  printf("Connected to rc bridge device!");
+  printf("Connected to rc bridge device!\n");
 
   // Initialize the ROS stuff and the node name
   ros::init(argc, argv, "rc_node");
@@ -63,7 +64,7 @@ int main(int argc, char **argv) {
   // Subscribe to the topic that the steering angle and throttle are published on
   ros::Subscriber sub = n.subscribe("car_input", 10, inputCallback);
 
-  
+  ROS_INFO("Connected to RC Bridge device");
 
   // Just let the callbacks do their work
   ros::spin();
