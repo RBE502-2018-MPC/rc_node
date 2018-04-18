@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, time
 import rospy
 import numpy as np
@@ -6,6 +8,7 @@ from PID import PID
 from Path import Path
 from rc_node.msg import car_input
 from geometry_msgs.msg import PoseStamped, TwistStamped
+
 
 class CarControl:
 
@@ -16,8 +19,13 @@ class CarControl:
         self.speed = 0
         self.path = []
         self.control = []
+        self.pos = []
+        self.coordinates = []
+        self.Z = car_input()
         x_start = 0
         y_start = 0
+
+        self.tracking = False
 
         # For moving the rc car at fixed velocity
         # elapsed_time = 0.0
@@ -33,14 +41,17 @@ class CarControl:
         # Subscribing to position data from vicon
         self.vicon_sub = rospy.Subscriber("/vrpn_client_node/rc_car/pose", PoseStamped, self.callback, queue_size = 10)
 
-        mode = input("Select Vehicle Motion? 1) Move Straight 2) Straight Path (PID) 3) Curve Path (PID)")
-        speed_text = input("Select Speed (s/f)")
+        # mode = raw_input("Select Vehicle Motion? 1) Move Straight 2) Straight Path (PID) 3) Curve Path (PID)")
+        # speed_text = raw_input("Select Speed (s/f)")
+        mode = '1'
+        speed_text = 's'
         if speed_text == 'f':
-            self.speed = 1.0
+            self.speed = 0.8
         else:
-            self.speed = 0.5
+            self.speed = 0.5  # 0.25 is reverse
         if mode == '1':  # Drive straight with no controller
-            angle = 0
+            print('Driving in circle no PID')
+            angle = 20
             self.move(angle)
         elif mode == '2':  # Drive straight with PID Control
             angle = 0
@@ -55,6 +66,7 @@ class CarControl:
             ki = 0.001
             kd = 2.8
             self.control = PID(kp, ki, kd)
+            self.tracking = True
 
             self.move(angle)
         elif mode == '3':  # Drive allow curved path with PID Control
@@ -70,38 +82,59 @@ class CarControl:
             ki = 0.001
             kd = 2.8
             self.control = PID(kp, ki, kd)
+            self.tracking = True
 
             self.move(angle)
         else:
             print('Nothing selected')
 
-    def callback(self,data):
+    def callback(self, data):
         self.pos = data.pose.position
+        '''
         self.coordinates = np.append(self.coordinates, np.matrix([self.pos.x, self.pos.y, self.pos.z]), axis=0)
         np.savetxt("src/py_test/data.csv", self.coordinates, delimiter=",")
+        '''
+        if self.tracking:
+            # Find error
+            error = self.path.find_error([self.pos.x, self.pos.y])
+            self.control.update_error(error)
 
-        # Find error
-        error = self.path.find_error([self.pos.x, self.pos.y])
-        self.control.update_error(error)
+            # Update steering angle
+            angle = self.control.output_steering()
+        else:
+            angle = self.Z.steer_angle
 
-        # Update steering angle
-        angle = self.control.output_steering()
         self.move(angle)
 
     def move(self, angle):
-        Z.steer_angle = angle
-        Z.power = self.speed
-        self.car_pub.publish(Z)
+        self.Z.steer_angle = angle
+        self.Z.power = self.speed
+        self.car_pub.publish(self.Z)
+
+    def stop(self):
+        print('stopping')
+        self.Z.steer_angle = 0
+        self.Z.power = 0
+        self.car_pub.publish(self.Z)
+
 
 
 def main(args):
     rospy.init_node('CarControl', anonymous=True, disable_signals=True)
-    print("here")
+    print("Staring")
     cc = CarControl()
     try:
+        print('try')
         rospy.spin()
     except KeyboardInterrupt:
-        print ("Shutting down")
+        print("Shutting down")
+        cc.stop()
+        rospy.spin()
+    finally:
+        # clean up
+        cc.stop()
+        rospy.spin()
+        print('done')
 
 
 if __name__ == '__main__':
