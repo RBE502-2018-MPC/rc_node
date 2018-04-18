@@ -36,7 +36,7 @@ void inputCallback(const rc_node::car_input::ConstPtr& msg) {
   float steer = clamp(msg->steer_angle, -KSTEERING_ANG_MAX, KSTEERING_ANG_MAX);
   float power = clamp(msg->power, -KPOWER_MAX, KPOWER_MAX);
   //first byte in the buffer is the value for the steering potentiometer
-  buf_out[0] = (uint8_t) (steer*KSTEERING + KBITVAL_MAX_ABS);
+  buf_out[0] = (uint8_t) (-steer*KSTEERING + KBITVAL_MAX_ABS);
   buf_out[1] = (uint8_t) (power*KPOWER + KBITVAL_MAX_ABS);
   rawhid_send(0, buf_out, 64, 100);  //Ignore errors for now... #TODO
   ROS_INFO("Sending out: [%d %d]", buf_out[0], buf_out[1]);
