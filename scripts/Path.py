@@ -6,7 +6,7 @@ class Path:
         self.base_path = path
         self.angles = []
         self.path = []
-        self.error = 0
+        self.error = float(0)
         self.error_index = 0
         self.reset(x_start, y_start)
 
@@ -43,21 +43,28 @@ class Path:
                 error = temp_error
         # If error is reduced it will advance your reference position to the smallest error found
         self.error_index = error_index
+        if self.error_index == len(self.angles)-1:
+            # If you reach the end, Let it keep going around the loop
+            self.error_index = 0
+            print('Went around the loop')
         self.error = error
-        return self.error, self.error_index
+        return self.error
 
     def cross_track_error(self, expected, actual, angle):
         # Cross track error reference
         # https://brage.bibsys.no/xmlui/bitstream/handle/11250/280167/FossenPettersenGaleazzi2014.pdf?sequence=3
         angle = angle
         error = -(actual[0] - expected[0])*math.sin(angle) + (actual[1] - expected[1])*math.cos(angle)
-        return error
+        return float(error)
 
     def reset(self, x_start, y_start):
         # Resets the path for a new trial and updates the planned path based on your starting position
         self.error_index = 0
-        self.error = 10000
+        self.error = float(0)
 
         # update path based on starting position
         self.path = [[x + x_start for x in self.base_path[0][:]], [y + y_start for y in self.base_path[1][:]]]
         self.find_path_tangent_angles()
+        print('start')
+        print(x_start)
+        print(y_start)

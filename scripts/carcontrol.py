@@ -26,6 +26,7 @@ class CarControl:
         y_start = 0
 
         self.tracking = False
+        self.driving = False
 
         # For moving the rc car at fixed velocity
         # elapsed_time = 0.0
@@ -43,12 +44,12 @@ class CarControl:
 
         # mode = raw_input("Select Vehicle Motion? 1) Move Straight 2) Straight Path (PID) 3) Curve Path (PID)")
         # speed_text = raw_input("Select Speed (s/f)")
-        mode = '1'
+        mode = '3'
         speed_text = 's'
         if speed_text == 'f':
             self.speed = 0.8
         else:
-            self.speed = 0.5  # 0.25 is reverse
+            self.speed = 0.5  # < 0.3 is reverse so
         if mode == '1':  # Drive straight with no controller
             print('Driving in circle no PID')
             angle = 20
@@ -73,14 +74,14 @@ class CarControl:
             angle = 20
 
             # Setup Path
-            curve_path_file = 'path_SRC\circle_path.csv'
+            curve_path_file = 'circle_path.csv'
             curved_line = load_file(curve_path_file)
             self.path = Path(curved_line, x_start, y_start)
 
             # Setup PID
-            kp = 0.1
-            ki = 0.001
-            kd = 2.8
+            kp = 2.0       # 0.1
+            ki = 1.0       # 0.001
+            kd = 2.0           # 2.8
             self.control = PID(kp, ki, kd)
             self.tracking = True
 
@@ -90,6 +91,14 @@ class CarControl:
 
     def callback(self, data):
         self.pos = data.pose.position
+
+        if not self.driving:  # Adjust path to current position, need to add rotation.
+                x_start = self.pos.x
+                y_start = self.pos.y
+                if self.tracking:
+                    self.path.reset(x_start, y_start)
+                    self.driving = True
+
         '''
         self.coordinates = np.append(self.coordinates, np.matrix([self.pos.x, self.pos.y, self.pos.z]), axis=0)
         np.savetxt("src/py_test/data.csv", self.coordinates, delimiter=",")
@@ -97,6 +106,7 @@ class CarControl:
         if self.tracking:
             # Find error
             error = self.path.find_error([self.pos.x, self.pos.y])
+            print(error)
             self.control.update_error(error)
 
             # Update steering angle
@@ -110,13 +120,13 @@ class CarControl:
         self.Z.steer_angle = angle
         self.Z.power = self.speed
         self.car_pub.publish(self.Z)
+        print(self.Z)
 
     def stop(self):
         print('stopping')
         self.Z.steer_angle = 0
         self.Z.power = 0
         self.car_pub.publish(self.Z)
-
 
 
 def main(args):
@@ -129,11 +139,9 @@ def main(args):
     except KeyboardInterrupt:
         print("Shutting down")
         cc.stop()
-        rospy.spin()
+       # rospy.spin()
     finally:
         # clean up
-        cc.stop()
-        rospy.spin()
         print('done')
 
 

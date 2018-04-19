@@ -8,9 +8,9 @@ class PID:
     # https://martin-thoma.com/twiddle/
 
     def __init__(self, kp, ki, kd):
-        self.p_error = 0
-        self.i_error = 0
-        self.d_error = 0
+        self.p_error = float(0)
+        self.i_error = float(0)
+        self.d_error = float(0)
         self.kp = kp
         self.ki = ki
         self.kd = kd
@@ -19,7 +19,7 @@ class PID:
         # Error is the current cross track error
         prior_error = self.p_error
         self.p_error = error
-        self.i_error = self.i_error + error
+        self.i_error += float(error)
         self.d_error = error - prior_error
 
     def output_steering(self):
