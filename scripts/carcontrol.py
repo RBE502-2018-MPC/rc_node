@@ -14,7 +14,7 @@ class CarControl:
 
     def __init__(self):
         # Publish the car input data
-        self.car_pub = rospy.Publisher("car_input", car_input, queue_size = 10)
+        self.car_pub = rospy.Publisher("car_input", car_input, queue_size=10)
 
         self.speed = 0
         self.path = []
@@ -24,6 +24,7 @@ class CarControl:
         self.Z = car_input()
         x_start = 0
         y_start = 0
+        self.start_time = 0
 
         self.tracking = False
         self.driving = False
@@ -40,16 +41,16 @@ class CarControl:
         # 	self.car_pub.publish(Z)
 
         # Subscribing to position data from vicon
-        self.vicon_sub = rospy.Subscriber("/vrpn_client_node/rc_car/pose", PoseStamped, self.callback, queue_size = 10)
+        self.vicon_sub = rospy.Subscriber("/vrpn_client_node/rc_car/pose", PoseStamped, self.callback, queue_size=10)
 
         # mode = raw_input("Select Vehicle Motion? 1) Move Straight 2) Straight Path (PID) 3) Curve Path (PID)")
         # speed_text = raw_input("Select Speed (s/f)")
-        mode = '3'
+        mode = '1'
         speed_text = 's'
         if speed_text == 'f':
-            self.speed = 0.8
+            self.speed = 0.6
         else:
-            self.speed = 0.5  # < 0.3 is reverse so
+            self.speed = 0.35  # < 0.3 is reverse so use 3.5
         if mode == '1':  # Drive straight with no controller
             print('Driving in circle no PID')
             angle = 20
@@ -58,7 +59,7 @@ class CarControl:
             angle = 0
 
             # Setup Path
-            straight_path_file = 'path_SRC\straight_path.csv'
+            straight_path_file = 'rc_node/scripts/straight_path.csv'
             straight_line = load_file(straight_path_file)
             self.path = Path(straight_line, x_start, y_start)
 
@@ -74,14 +75,14 @@ class CarControl:
             angle = 20
 
             # Setup Path
-            curve_path_file = 'circle_path.csv'
+            curve_path_file = 'rc_node/scripts/circle_path.csv'
             curved_line = load_file(curve_path_file)
             self.path = Path(curved_line, x_start, y_start)
 
             # Setup PID
-            kp = 2.0       # 0.1
-            ki = 1.0       # 0.001
-            kd = 2.0           # 2.8
+            kp = 50.0    # 0.1 12
+            ki = 0.001     # 0.001 0.01
+            kd = 40.0         # 2.8 7.0
             self.control = PID(kp, ki, kd)
             self.tracking = True
 
@@ -97,7 +98,9 @@ class CarControl:
                 y_start = self.pos.y
                 if self.tracking:
                     self.path.reset(x_start, y_start)
-                    self.driving = True
+                self.driving = True
+                self.start_time = time.time()
+
 
         '''
         self.coordinates = np.append(self.coordinates, np.matrix([self.pos.x, self.pos.y, self.pos.z]), axis=0)
@@ -114,6 +117,9 @@ class CarControl:
         else:
             angle = self.Z.steer_angle
 
+        if (time.time() - self.start_time) > 25.0:
+            self.stop()
+            angle = 0
         self.move(angle)
 
     def move(self, angle):
@@ -124,9 +130,11 @@ class CarControl:
 
     def stop(self):
         print('stopping')
+        self.speed = 0
         self.Z.steer_angle = 0
         self.Z.power = 0
         self.car_pub.publish(self.Z)
+        self.driving = False
 
 
 def main(args):
@@ -138,7 +146,7 @@ def main(args):
         rospy.spin()
     except KeyboardInterrupt:
         print("Shutting down")
-        cc.stop()
+        #cc.stop()
        # rospy.spin()
     finally:
         # clean up
