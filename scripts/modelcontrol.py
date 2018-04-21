@@ -574,7 +574,7 @@ def mpc():
     t, x, y, yaw, v, d, a = do_simulation(cx, cy, cyaw, ck, sp, dl)
 
     v_max = np.max(v)
-    power = v/v_max
+    vel = v/v_max
     steer = (np.array(d)*180)/math.pi
 
     # np.savetxt("velocity.csv", power, delimiter=',')
@@ -588,27 +588,27 @@ def mpc():
     #     csvReader2 = csv.reader(csv2)
     #     steer = [s for s in csvReader2]
 
-    self.car_pub = rospy.Publisher("car_input", car_input, queue_size = 100)
-
+    car_pub = rospy.Publisher("car_input", car_input, queue_size = 100)
+    rospy.init_node('mpc', anonymous=True)
     i = 0
     elapsed_time = 0.0
     r = rospy.Rate(10)
     while i < 375:
         Z = car_input()
-        Z.steer_angle = float(steer[i][0])
-        Z.power = float(vel[i][0])
+        Z.steer_angle = float(steer[i])
+        Z.power = float(vel[i])
         i = i + 1
-        self.car_pub.publish(Z)
+        car_pub.publish(Z)
         r.sleep()
         
     start_time = time.time()
     while elapsed_time < 1:
         elapsed_time = time.time() - start_time
         Z.power = -0.1
-        self.car_pub.publish(Z)
+        car_pub.publish(Z)
         
     Z.power = 0.0
-    self.car_pub.publish(Z)
+    car_pub.publish(Z)
 
     if show_animation:
         plt.close("all")
