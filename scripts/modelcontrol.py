@@ -358,7 +358,7 @@ def check_goal(state, goal, tind, nind):
     return False
 
 
-def do_simulation(cx, cy, cyaw, ck, sp, dl):
+def do_simulation(cx, cy, cyaw, ck, sp, dl, pub):
     """
     Simulation
 
@@ -388,6 +388,7 @@ def do_simulation(cx, cy, cyaw, ck, sp, dl):
 
     cyaw = smooth_yaw(cyaw)
 
+    r = rospy.Rate(10)
     while MAX_TIME >= time:
         xref, target_ind, dref = calc_ref_trajectory(
             state, cx, cy, cyaw, ck, sp, dl, target_ind)
@@ -411,6 +412,11 @@ def do_simulation(cx, cy, cyaw, ck, sp, dl):
         d.append(di)
         a.append(ai)
 
+        Z = car_input()
+        Z.steer_angle = float(d[-1]*180/math.pi)
+        Z.power = float(v[-1]/MAX_SPEED)
+        pub.publish(Z)
+
         if check_goal(state, goal, target_ind, len(cx)):
             print("Goal")
             break
@@ -429,6 +435,8 @@ def do_simulation(cx, cy, cyaw, ck, sp, dl):
             plt.title("Time[s]:" + str(round(time, 2)) +
                       ", speed[km/h]:" + str(round(state.v * 3.6, 2)))
             plt.pause(0.0001)
+
+        r.sleep()
 
     return t, x, y, yaw, v, d, a
 
@@ -572,7 +580,9 @@ def mpc():
 
     sp = calc_speed_profile(cx, cy, cyaw, TARGET_SPEED)
 
-    t, x, y, yaw, v, d, a = do_simulation(cx, cy, cyaw, ck, sp, dl)
+    car_pub = rospy.Publisher("car_input", car_input, queue_size = 100)
+
+    t, x, y, yaw, v, d, a = do_simulation(cx, cy, cyaw, ck, sp, dl,car_pub)
 
     v_max = np.max(v)
     vel = v/v_max
@@ -589,19 +599,19 @@ def mpc():
     #     csvReader2 = csv.reader(csv2)
     #     steer = [s for s in csvReader2]
 
-    car_pub = rospy.Publisher("car_input", car_input, queue_size = 100)
-    rospy.init_node('mpc', anonymous=True)
-    i = 0
+    # car_pub = rospy.Publisher("car_input", car_input, queue_size = 100)
+    # i = 0
+    # r = rospy.Rate(10)
+    # while i < len(vel):
+    #     Z = car_input()
+    #     Z.steer_angle = float(steer[i])
+    #     Z.power = float(vel[i])
+    #     i = i + 1
+    #     car_pub.publish(Z)
+    #     r.sleep()
+
+    Z = car_input()
     elapsed_time = 0.0
-    r = rospy.Rate(10)
-    while i < len(vel):
-        Z = car_input()
-        Z.steer_angle = float(steer[i])
-        Z.power = float(vel[i])
-        i = i + 1
-        car_pub.publish(Z)
-        r.sleep()
-        
     start_time = time.time()
     while elapsed_time < 1:
         elapsed_time = time.time() - start_time
@@ -638,6 +648,7 @@ def mpc():
 
 
 if __name__ == '__main__':
+    rospy.init_node('mpc', anonymous=True)
     try:
         mpc()
     except rospy.ROSInterruptException:
