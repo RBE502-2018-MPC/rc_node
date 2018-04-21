@@ -1,6 +1,7 @@
 import sys
 # sys.path.append("../../PathPlanning/CubicSpline/")
 import rospy
+import time
 import numpy as np
 import math
 import cvxpy
@@ -593,7 +594,7 @@ def mpc():
     i = 0
     elapsed_time = 0.0
     r = rospy.Rate(10)
-    while i < 375:
+    while i < len(vel):
         Z = car_input()
         Z.steer_angle = float(steer[i])
         Z.power = float(vel[i])
