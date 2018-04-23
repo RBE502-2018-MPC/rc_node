@@ -25,25 +25,26 @@ class Path:
         # Reset error calculation parameters
         error_index = self.error_index + 1  # chooses the next path position so we don't get stuck on one
         end_index = error_index + 100  # Using a resolution of 0.0001 m per step, lower this to reduce computation
-
-        if end_index > len(self.path[0][:])-1:
-            end_index = len(self.path[0][:])-1
-        angle = self.angles[len(self.angles) - 1]
-        expected_end = [self.path[0][error_index], self.path[1][error_index]]
-        error = self.cross_track_error(expected_end, actual, angle)  # Sets an initial value
+        #  if end_index > len(self.path[0][:])-1:
+        #   end_index = len(self.path[0][:])-1
+        angle = self.angles[error_index]
+        expected = [self.path[0][error_index], self.path[1][error_index]]
+        error = self.cross_track_error(expected, actual, angle)  # Sets an initial value
         for i in range(error_index, end_index):
-            expected_end = [self.path[0][error_index], self.path[1][error_index]]
-            if error_index > len(self.angles)-1:
-                angle = self.angles[len(self.angles)-1]
+            if i > len(self.angles)-1:
+                index = i - (len(self.angles)-1)
             else:
-                angle = self.angles[error_index]
-            temp_error = self.cross_track_error(expected_end, actual, angle)
+                index = i
+            angle = self.angles[index]
+            expected = [self.path[0][index], self.path[1][index]]
+            temp_error = self.cross_track_error(expected, actual, angle)
             if abs(temp_error) < abs(error):
-                error_index = i
+                error_index = index
                 error = temp_error
         # If error is reduced it will advance your reference position to the smallest error found
         self.error_index = error_index
-        if self.error_index == len(self.angles)-1:
+        print(error_index)
+        if self.error_index > len(self.angles)-1:
             # If you reach the end, Let it keep going around the loop
             self.error_index = 0
             print('Went around the loop')
